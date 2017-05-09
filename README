@@ -1,0 +1,56 @@
+1. run_tests.sh : Wrapper to run all cases residing in directory ./tests
+2. STC.INFO     : Basic information of Storage Test Collection (STC)
+3. config.vars  : All environment variables which can be configured
+4. lib          : Lib functions
+5. tests        : Test cases
+6. sandbox/tools: some handy tools for helping to write C, Bash or Python code
+                  with high efficiency
+   sandbox/sshsetup: setup ssh connection with passwordless which are of
+                  Korn Shell (ksh) code
+
+        .
+        ├── config.vars
+        ├── lib
+        ├── Makefile
+        ├── README
+        ├── run_tests.sh
+        ├── sandbox
+        │   ├── sshsetup
+        │   └── tools
+        ├── STC.INFO
+        └── tests
+            ├── demo
+            ├── en
+            └── mn
+
+
+        NOTE:
+        1. setup.sh and cleanup.sh are optional
+        2. test cases must start with prefix "tc_"
+           which is by design (pls refer to run_tests.sh)
+        3. Currently Makefile templates are not well drafted, hence you
+           don't have to write Makefile
+
+Q: How to run?
+A: Easy, e.g.
+
+        bash$ bash ./run_tests.sh -e -T tests/demo
+        OR
+        bash$ make && ./run -e -T tests/demo
+
+
+OR (run a single case)
+
+        bash$ bash tests/demo/tc_demo_pos001.sh
+
+********************************************************************************
+SIDES:
+        To make your shell code clean, please always check your code via tool
+        "sandbox/tools/icat"
+        e.g.
+        bash$ sandbox/tools/icat -c tests/demo/*.sh
+        [ PASS ] check file tests/demo/cleanup.sh
+        [ PASS ] check file tests/demo/setup.sh
+        [ PASS ] check file tests/demo/tc_demo_pos001.sh
+        [ PASS ] check file tests/demo/tc_demo_pos002.sh
+********************************************************************************
