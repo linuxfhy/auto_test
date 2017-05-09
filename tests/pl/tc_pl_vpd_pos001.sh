@@ -21,6 +21,10 @@ CDIR=$(dirname  $0)
 TMPDIR=${TMPDIR:-"/tmp"}
 TSROOT=$CDIR/../../
 
+AWKCMD=awk
+LSCMD=ls
+trcfile="/dumps/scrumtest.trc"
+
 source $TSROOT/lib/libstr.sh
 source $TSROOT/lib/libcommon.sh
 source $TSROOT/config.vars
@@ -30,7 +34,55 @@ S_SATASK=/compass/bin/satask
 S_SVCTASK=/compass/bin/svctask
 S_EC_CHVPD=/compass/ec_chvpd
 
+function log()
+{
+    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* >>${trcfile}
+}
+
+function remote_exec()
+{
+    ssh -p 26 ${remote_ip} "$*"
+    return $?
+}
+
+if [ ! -f ${trcfile} ]
+then
+    touch ${trcfile}
+else
+    typeset -i SZ
+    SZ=$(${LSCMD} -s ${trcfile} | ${AWKCMD} -F " " '{print $1}')
+    SZ=${SZ}*1024
+    if [ $SZ -gt 163840 ]
+    then
+        tail --bytes=163840 ${trcfile} >/tmp/$$ 2>/dev/null
+        mv -f /tmp/$$ ${trcfile} 2>/dev/null
+    fi
+fi
+
+
 tc_start $0
 trap "tc_xres \$?" EXIT
+
+#test case 1.1
+function test_case_fun_1_1 ()
+{
+    total_step_case_1_1=8
+    cur_step=1
+
+    log "STEP ${cur_step} of ${total_step_case_1_1}:exec $1 on local node"
+    cur_step=$((${cur_step}+1))
+    sh $1
+
+    [ $? -eq 0 ] || {
+        log "exec $1 fail on ${cur_node} node"
+        exit 1
+    }
+    return 0
+}
+
+log ">>>>>>test case 1.1 start<<<<<<"
+test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
+[ $? -eq 0 ] || exit 1
+log ">>>>>>test case 1.1 pass<<<<<<"
 
 exit $STF_PASS
