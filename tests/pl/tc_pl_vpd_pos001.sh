@@ -164,7 +164,7 @@ function test_case_fun_2_2()
         log "set cmc0 master fail,cmd_rc is $?"
         exit 1
     fi
-    sh write_midplanevpd_use_ecchvpd.sh w_0_r_1
+    sh write_midplanevpd_use_ecchvpd.sh $1
     if [[ $? != 0 ]]; then
         log " Write by CMC0 and read by CMC1"
         exit 1
@@ -173,7 +173,7 @@ function test_case_fun_2_2()
 
 echo ""
 log ">>>>>>test case 2.2 start: Write by CMC0 and read by CMC1<<<<<<"
-test_case_fun_2_3
+test_case_fun_2_2 w_0_r_1
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.2 pass<<<<<<"
 
@@ -191,7 +191,7 @@ log ">>>>>>test case 2.3 pass<<<<<<"
 echo ""
 log ">>>>>>test case 2.4 need reset cmc handly, mark pass<<<<<<"
 
-function test_case_2_5()
+function test_case_fun_2_5()
 {
     get_valid_cmc_ip
     timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x00
@@ -216,6 +216,43 @@ log ">>>>>>test case 2.5 start: Change CMC0 to slave and test VPD access<<<<<<"
 test_case_fun_2_5
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.5 pass<<<<<<"
+
+echo ""
+log ">>>>>>test case 2.6 start: Write, then change CMC0 to slave, then read<<<<<<"
+test_case_fun_2_2 w_m_r_s
+[[ $? == 0 ]] || exit $STF_FAIL
+log ">>>>>>test case 2.6 pass<<<<<<"
+
+function test_case_fun_2_7()
+{
+    total_step_case_1_1=3
+    cur_step=1
+
+    log "STEP ${cur_step} of ${total_step_case_1_1}:close network to cmc0"
+    cur_step=$((${cur_step}+1))
+    ifconfig eth2 down
+
+    log "STEP ${cur_step} of ${total_step_case_1_1}:access vpd"
+    cur_step=$((${cur_step}+1))
+    test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
+    if [[ $? != 0 ]];then
+    {
+        log "access vpd fail"
+        ifconfig eth2 up
+        exit 1
+    }
+    fi
+
+    log "STEP ${cur_step} of ${total_step_case_1_1}:recover test config,open eth2"
+    ifconfig eth2 up
+    exit 0
+}
+
+echo ""
+log ">>>>>>test case 2.7 start: Simulate CMC0 fail<<<<<<"
+test_case_fun_2_7
+[[ $? == 0 ]] || exit $STF_FAIL
+log ">>>>>>test case 2.7 pass<<<<<<"
 
 
 
