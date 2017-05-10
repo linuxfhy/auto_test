@@ -10,7 +10,7 @@ valid_cmc_ip=192.168.200.42
 
 function log()
 {
-    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* >>${trcfile}
+    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* #>>${trcfile}
 }
 
 function get_valid_cmc_ip()

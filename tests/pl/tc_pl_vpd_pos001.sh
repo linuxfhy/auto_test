@@ -36,7 +36,7 @@ S_EC_CHVPD=/compass/ec_chvpd
 
 function log()
 {
-    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* >>${trcfile}
+    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* #>>${trcfile}
 }
 
 function remote_exec()
@@ -86,5 +86,10 @@ log ">>>>>>test case 1.1 start<<<<<<"
 test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
 [ $? -eq 0 ] || exit $STF_FAIL
 log ">>>>>>test case 1.1 pass<<<<<<"
+
+log ">>>>>>test case 1.2 start<<<<<<"
+test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
+[ $? -eq 0 ] || exit $STF_FAIL
+log ">>>>>>test case 1.2 pass<<<<<<"
 
 exit $STF_PASS
