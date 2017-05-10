@@ -66,23 +66,25 @@ trap "tc_xres \$?" EXIT
 #test case 1.1
 function test_case_fun_1_1 ()
 {
-    total_step_case_1_1=8
+    total_step_case_1_1=2
     cur_step=1
 
-    log "STEP ${cur_step} of ${total_step_case_1_1}:exec $1 on local node"
+    log "STEP ${cur_step} of ${total_step_case_1_1}:exec $1"
     cur_step=$((${cur_step}+1))
     sh $1
 
-    [ $? -eq 0 ] || {
-        log "exec $1 fail on ${cur_node} node"
+    if [ $? != 0 ];then
+    {
+        log "exec $1 fail on ${cur_node} node,cmd_rc is $?"
         exit 1
     }
+    fi
     return 0
 }
 
 log ">>>>>>test case 1.1 start<<<<<<"
 test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
-[ $? -eq 0 ] || exit 1
+[ $? -eq 0 ] || exit $STF_FAIL
 log ">>>>>>test case 1.1 pass<<<<<<"
 
 exit $STF_PASS
