@@ -230,7 +230,7 @@ function test_case_fun_2_7()
 
     log "STEP ${cur_step} of ${total_step_case_1_1}:close network to cmc0"
     cur_step=$((${cur_step}+1))
-    ifconfig eth2 down
+    ifconfig $1 down
 
     log "STEP ${cur_step} of ${total_step_case_1_1}:access vpd"
     cur_step=$((${cur_step}+1))
@@ -238,21 +238,30 @@ function test_case_fun_2_7()
     if [[ $? != 0 ]];then
     {
         log "access vpd fail"
-        ifconfig eth2 up
+        ifconfig $1 up
         exit 1
     }
     fi
 
-    log "STEP ${cur_step} of ${total_step_case_1_1}:recover test config,open eth2"
-    ifconfig eth2 up
+    log "STEP ${cur_step} of ${total_step_case_1_1}:recover test config,open $1"
+    ifconfig $1 up
     exit 0
 }
 
 echo ""
 log ">>>>>>test case 2.7 start: Simulate CMC0 fail<<<<<<"
-test_case_fun_2_7
+test_case_fun_2_7 eth2
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.7 pass<<<<<<"
+
+echo ""
+log ">>>>>>test case 2.8 start: Simulate CMC1 fail<<<<<<"
+test_case_fun_2_7 eth3
+[[ $? == 0 ]] || exit $STF_FAIL
+log ">>>>>>test case 2.8 pass<<<<<<"
+
+log ">>>>>>test case 2.9/2.10 need remove cmc handly, mark as pass<<<<<<"
+
 
 
 
