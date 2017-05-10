@@ -83,17 +83,22 @@ function test_case_fun_1_1 ()
     return 0
 }
 
-log "kill node before start "
+log ">>>>>>kill node before start<<<<<<"
 kill_node -f >null 2>&1
 
-log ">>>>>>test case 1.1 start<<<<<<"
+log ">>>>>>test case 1.1 start:write mid vpd use ipmi<<<<<<"
 test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
 [ $? -eq 0 ] || exit $STF_FAIL
 log ">>>>>>test case 1.1 pass<<<<<<"
 
-log ">>>>>>test case 1.2 start<<<<<<"
+log ">>>>>>test case 1.2 start:write mid vpd use ec_chvpd<<<<<<"
 test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
 [ $? -eq 0 ] || exit $STF_FAIL
 log ">>>>>>test case 1.2 pass<<<<<<"
+
+log ">>>>>>test case 1.3 start:write can vpd use ipmi<<<<<<"
+test_case_fun_1_1 write_canistervpd_optimized.sh
+[ $? -eq 0 ] || exit $STF_FAIL
+log ">>>>>>test case 1.3 pass<<<<<<"
 
 exit $STF_PASS
