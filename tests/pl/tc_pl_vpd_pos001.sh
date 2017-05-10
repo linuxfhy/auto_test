@@ -79,8 +79,12 @@ function test_case_fun_1_1 ()
         exit 1
     }
     fi
+    log "STEP ${cur_step} of ${total_step_case_1_1}:write and read check pass,write done"
     return 0
 }
+
+log "kill node before start "
+kill_node -f >null 2>&1
 
 log ">>>>>>test case 1.1 start<<<<<<"
 test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
