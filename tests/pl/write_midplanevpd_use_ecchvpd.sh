@@ -19,15 +19,15 @@ function get_valid_cmc_ip()
     do
         ipaddr[$i]="$((16#${array[4+$((8*$i))]})).$((16#${array[5+$((8*$i))]})).$((16#${array[6+$((8*$i))]})).$((16#${array[7+$((8*$i))]}))"
         #log "cmc${i}_eth1_ip:"${ipaddr[$i]}
-        readcmd="timeout -k1 2 ipmitool -H ${ipaddr[$i]} -U admin -P admin raw 0x30 0x23"
-        readresult=$(${readcmd})
+        test_cmd="timeout -k1 2 ipmitool -H ${ipaddr[$i]} -U admin -P admin raw 0x30 0x23"
+        test_result=$(${test_cmd})
 
         if [ $? != 0 ]; then
             log "check cmc${i} is master fail,cmd_rc:$?(124:timeout,127:cmd not exist)"
             continue
         fi
 
-        #log "cmc${i} is:"${readresult}"(1:master,0:slave)"
+        #log "cmc${i} is:"${test_result}"(1:master,0:slave)"
         valid_cmc_ip=${ipaddr[$i]}
         eth1ip_of_cmc[$i]=${ipaddr[$i]}
         return 0
@@ -95,9 +95,9 @@ function write_and_check_vpd()
 
 
    #readresult="${readresult}222" #inject error
-    #log "w_cmd is ${writecmd}"
-    #log "r_cmd is ${readcmd}"
-    #log "read result is ${readresult}"
+    log "w_cmd is ${writecmd}"
+    log "r_cmd is ${readcmd}"
+    log "read result is ${readresult}"
 
     write_data=$2
 

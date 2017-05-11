@@ -302,7 +302,7 @@ function start_compass_and_check()
 
 function test_case_fun_4_1()
 {
-     kill_node -f
+     kill_node -f  >null 2>&1
      get_valid_cmc_ip
      timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x0$1
      start_compass_and_check
@@ -322,7 +322,7 @@ log ">>>>>>test case 4.2 pass<<<<<<"
 
 function test_case_fun_4_3()
 {
-     kill_node -f
+     kill_node -f >null 2>&1
      ifconfig $1 down
      start_compass_and_check
      cmd_rc=$?
@@ -343,7 +343,7 @@ log ">>>>>>test case 4.5/4.6: Start compass when only one cmc is present, need o
 
 function test_case_fun_6_1()
 {
-    kill_node -f
+    kill_node -f >null 2>&1
     sh write_midplanevpd_use_ecchvpd_inject_err.sh $1
 }
 log ">>>>>>test case 6.1 start<<<<<<"
