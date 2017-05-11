@@ -19,7 +19,7 @@ function write_and_check_vpd()
         log "cmd exec failed,cmd:${writecmd}, cmd_rc:${cmd_rc}"
         return ${cmd_rc}
     }
-    
+
     readcmd="/compass/ec_chvpd -r -c -n $1"
     readresult=$(${readcmd})
     cmd_rc=$?
@@ -27,12 +27,12 @@ function write_and_check_vpd()
         log "cmd exec failed,cmd:${readcmd}, cmd_rc:${cmd_rc}"
         return ${cmd_rc}
     }
-   
+
    #readresult="${readresult}222" #inject error
     #log "w_cmd is ${writecmd}"
     #log "r_cmd is ${readcmd}"
     #log "read result is ${readresult}"
-    
+
     write_data=$2
     if [[ $1 =~ "vpd_can_version_e" ]]
     then

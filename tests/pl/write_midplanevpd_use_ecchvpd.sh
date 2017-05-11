@@ -67,10 +67,8 @@ function write_and_check_vpd()
     then
         log "change cmc0 to slave"
         get_valid_cmc_ip
-        timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x00
+        timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x00 >null
     fi
-
-    readcmd="/compass/ec_chvpd -r -n $1"
 
     if [[ ${g_para_1} =~ "w_0_r_1" ]]
     then
@@ -79,6 +77,7 @@ function write_and_check_vpd()
         ifconfig eth3 up
     fi
 
+    readcmd="/compass/ec_chvpd -r -n $1"
     readresult=$(${readcmd})
     cmd_rc=$?
     [ ${cmd_rc} -eq 0 ] || {
@@ -91,7 +90,7 @@ function write_and_check_vpd()
     then
         log "change cmc0 to master"
         get_valid_cmc_ip
-        timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x01
+        timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x01 >null
     fi
 
 
