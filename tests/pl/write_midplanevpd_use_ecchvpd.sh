@@ -50,7 +50,7 @@ function write_and_check_vpd()
 
     if [[ ${g_para_1} =~ "w_0_r_1" ]] #for test case:write use cmc0 and read use cmc1
     then
-        log "write use cmc0,read use cmc1,close cmc1"
+        #log "write use cmc0,read use cmc1,close cmc1"
         ifconfig eth2 up
         ifconfig eth3 down
     fi
@@ -65,14 +65,14 @@ function write_and_check_vpd()
 
     if [[ ${g_para_1} =~ "w_m_r_s" ]] #for test case:write when cmc0 is master and read when cmc0 is slave
     then
-        log "change cmc0 to slave"
+        #log "change cmc0 to slave"
         get_valid_cmc_ip
         timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x00 >null
     fi
 
     if [[ ${g_para_1} =~ "w_0_r_1" ]]
     then
-        log "write use cmc0,read use cmc1,close cmc0"
+        #log "write use cmc0,read use cmc1,close cmc0"
         ifconfig eth2 down
         ifconfig eth3 up
     fi
@@ -88,16 +88,16 @@ function write_and_check_vpd()
 
     if [[ ${g_para_1} =~ "w_m_r_s" ]] #for test case:write when cmc0 is master and read when cmc0 is slave
     then
-        log "change cmc0 to master"
+        #log "change cmc0 to master"
         get_valid_cmc_ip
         timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x01 >null
     fi
 
 
    #readresult="${readresult}222" #inject error
-    log "w_cmd is ${writecmd}"
-    log "r_cmd is ${readcmd}"
-    log "read result is ${readresult}"
+    #log "w_cmd is ${writecmd}"
+    #log "r_cmd is ${readcmd}"
+    #log "read result is ${readresult}"
 
     write_data=$2
 

@@ -132,7 +132,7 @@ n=$(($RANDOM%10))
 execcmcipmicmd 0x00 0x2F 0x40 0x38 0x35 0x59 0x35 0x39 0x36 0x32
 execcmcipmicmd 0x00 0x2F 0x47 0x59 0x48 0x55 0x39 0x39 0x39
 execcmcipmicmd 0x00 0x2F 0x4D 0x34 0x47 0x30 0x3$l 0x3$m 0x3$n
-log "write fru_identify:11S85Y5962YHU9994G0$l$m$n, 11S is not in eeprom"
+#log "write fru_identify:11S85Y5962YHU9994G0$l$m$n, 11S is not in eeprom"
 
 
 
@@ -142,95 +142,95 @@ cpu_cnt=$(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)
 #0x4C 0x30 0x3${cpu_cnt}
 execcmcipmicmd 0x00 0x2F 0x60 0x31 0x38 0x31 0x35
 execcmcipmicmd 0x00 0x2F 0x64 0x4C 0x30 0x3${cpu_cnt}
-log "write mtm:1815-L0${cpu_cnt}"
+#log "write mtm:1815-L0${cpu_cnt}"
 
 
 
 #vpd_mid_version_e:001
 execcmcipmicmd 0x00 0x2B 0x24 0x00 0x01
-log "write vpd_mid_version_e:001"
+#log "write vpd_mid_version_e:001"
 
 #vpd_mid_fru_part_number_e:85y5896
 execcmcipmicmd 0x00 0x2F 0x56 0x38 0x35 0x59 0x35 0x38 0x39 0x36
-log "write vpd_mid_fru_part_number_e:85y5896"
+#log "write vpd_mid_fru_part_number_e:85y5896"
 
 
 #product_sn:S9Y9$l$m$n
 execcmcipmicmd 0x00 0x2F 0x67 0x53 0x39 0x59 0x39 0x3$l 0x3$m 0x3$n
-log "random l,m,n is $l,$m,$n"
-log "write product_sn:S9Y9$l$m$n"
+#log "random l,m,n is $l,$m,$n"
+#log "write product_sn:S9Y9$l$m$n"
 
 #vpd_mid_latest_cluster_id_e    0000000000000000:
 execcmcipmicmd 0x00 0x2F 0xA4 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write latest_cluster_id:0000000000000000"
+#log "write latest_cluster_id:0000000000000000"
 
 #vpd_mid_next_cluster_id_e    00000200642105e2
 execcmcipmicmd 0x00 0x2F 0xAC 0x00 0x00 0x02 0x00 0x64 0x21 0x05 0xe2
-log "write mid_next_cluster_id:00000200642105e2"
+#log "write mid_next_cluster_id:00000200642105e2"
 
 #vpd_mid_node1_wwnn_e    56c92bf80100${l}${m}${n}0
 #vpd_mid_node2_wwnn_e    56c92bf80100${l}${m}${n}1
 execcmcipmicmd 0x00 0x2F 0xC0 0x56 0xc9 0x2b 0xf8 0x01 0x00 0x${l}${m} 0x${n}0
 execcmcipmicmd 0x00 0x2F 0xC8 0x56 0xc9 0x2b 0xf8 0x01 0x00 0x${l}${m} 0x${n}1
-log "write node1/2_wwnn:56c92bf80100${l}${m}${n}0/56c92bf80100${l}${m}${n}1"
+#log "write node1/2_wwnn:56c92bf80100${l}${m}${n}0/56c92bf80100${l}${m}${n}1"
 
 
 
 #vpd_mid_node1_SAT_ipv4_address_e    192.168.001.100
 execcmcipmicmd 0x00 0x2F 0xE8 0xC0 0xA8 0x01 0x64
-log "write node1_SAT_ipv4_address:192.168.001.100"
+#log "write node1_SAT_ipv4_address:192.168.001.100"
 
 #vpd_mid_node1_SAT_ipv6_address_e    000000000000000000000000000000000000000
 execcmcipmicmd 0x00 0x2F 0xEC 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node1_SAT_ipv6_address:000000000000000000000000000000000000000"
+#log "write node1_SAT_ipv6_address:000000000000000000000000000000000000000"
 
 #vpd_mid_node1_SAT_ipv6_prefix_e 000
 execcmcipmicmd 0x00 0x2F 0xFC 0x00
-log "write node1_SAT_ipv6_prefix:000"
+#log "write node1_SAT_ipv6_prefix:000"
 
 #vpd_mid_node1_SAT_ipv4_subnet_e    255.255.255.000
 #vpd_mid_node1_SAT_ipv4_gateway_e    192.168.001.001
 execcmcipmicmd 0x00 0x30 0x00 0xFF 0xFF 0xFF 0x00
 execcmcipmicmd 0x00 0x30 0x04 0xC0 0xA8 0x01 0x01
-log "write node1_SAT_ipv4_subnet/gateway:255.255.255.000/192.168.001.001"
+#log "write node1_SAT_ipv4_subnet/gateway:255.255.255.000/192.168.001.001"
 
 
 
 #vpd_mid_node1_SAT_ipv6_gateway_e    000000000000000000000000000000000000000
 execcmcipmicmd 0x00 0x30 0x08 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node1_SAT_ipv6_gateway:000000000000000000000000000000000000000"
+#log "write node1_SAT_ipv6_gateway:000000000000000000000000000000000000000"
 
 #vpd_mid_node2_SAT_ipv4_address_e    192.168.001.102:
 execcmcipmicmd 0x00 0x30 0x28 0xC0 0xA8 0x01 0x66
-log "write node2_SAT_ipv4_address:192.168.001.102"
+#log "write node2_SAT_ipv4_address:192.168.001.102"
 
 #vpd_mid_node2_SAT_ipv6_address_e    000000000000000000000000000000000000000:
 execcmcipmicmd 0x00 0x30 0x2C 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node2_SAT_ipv6_address:000000000000000000000000000000000000000"
+#log "write node2_SAT_ipv6_address:000000000000000000000000000000000000000"
 
 #vpd_mid_node2_SAT_ipv6_prefix_e    000:
 execcmcipmicmd 0x00 0x30 0x3C 0x00
-log "write node2_SAT_ipv6_prefix:000"
+#log "write node2_SAT_ipv6_prefix:000"
 
 #vpd_mid_node2_SAT_ipv4_subnet_e    255.255.255.000
 execcmcipmicmd 0x00 0x30 0x40 0xFF 0xFF 0xFF 0x00
-log "write node2_SAT_ipv4_subnet:255.255.255.000"
+#log "write node2_SAT_ipv4_subnet:255.255.255.000"
 
 #vpd_mid_node2_SAT_ipv4_gateway_e    192.168.001.001
 execcmcipmicmd 0x00 0x30 0x44 0xC0 0xA8 0x01 0x01
-log "write node2_SAT_ipv4_gateway:192.168.001.001"
+#log "write node2_SAT_ipv4_gateway:192.168.001.001"
 
 #vpd_mid_node2_SAT_ipv6_gateway_e    000000000000000000000000000000000000000
 execcmcipmicmd 0x00 0x30 0x48 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node2_SAT_ipv6_gateway:000000000000000000000000000000000000000"
+#log "write node2_SAT_ipv6_gateway:000000000000000000000000000000000000000"
 
 #vpd_mid_node1_original_wwnn_e    0000000000000000
 execcmcipmicmd 0x00 0x30 0x60 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node1_original_wwnn:0000000000000000"
+#log "write node1_original_wwnn:0000000000000000"
 
 #vpd_mid_node2_original_wwnn_e    0000000000000000
 execcmcipmicmd 0x00 0x30 0x68 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
-log "write node2_original_wwnn:0000000000000000"
+#log "write node2_original_wwnn:0000000000000000"
 
 if [ $write_ok = 1 ]; then
     log "write midplane vpd OK"

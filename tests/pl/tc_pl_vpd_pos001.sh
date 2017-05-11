@@ -122,19 +122,19 @@ kill_node -f >null 2>&1
 
 echo ""
 log ">>>>>>test case 1.1 start:write mid vpd use ipmi<<<<<<"
-#test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
+test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.1 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 1.2 start:write mid vpd use ec_chvpd<<<<<<"
-#test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
+test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.2 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 1.3 start:write can vpd use ipmi<<<<<<"
-#test_case_fun_1_1 write_canistervpd_optimized.sh
+test_case_fun_1_1 write_canistervpd_optimized.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.3 pass<<<<<<"
 
@@ -148,7 +148,7 @@ echo ""
 log ">>>>>>test case 2.1 start:Test mid VPD access while both CMC ok<<<<<<"
 ifconfig eth2 up
 ifconfig eth3 up
-#test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
+test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.1 pass<<<<<<"
 
@@ -173,7 +173,7 @@ function test_case_fun_2_2()
 
 echo ""
 log ">>>>>>test case 2.2 start: Write by CMC0 and read by CMC1<<<<<<"
-#test_case_fun_2_2 w_0_r_1
+test_case_fun_2_2 w_0_r_1
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.2 pass<<<<<<"
 
@@ -184,7 +184,7 @@ function test_case_fun_2_3()
 }
 echo ""
 log ">>>>>>test case 2.3 start: Write one mid vpd and check other VPD is changed<<<<<<"
-#test_case_fun_2_3
+test_case_fun_2_3
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.3 pass<<<<<<"
 
@@ -213,7 +213,7 @@ function test_case_fun_2_5()
 
 echo ""
 log ">>>>>>test case 2.5 start: Change CMC0 to slave and test VPD access<<<<<<"
-#test_case_fun_2_5
+test_case_fun_2_5
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.5 pass<<<<<<"
 
@@ -228,11 +228,11 @@ function test_case_fun_2_7()
     total_step_case_1_1=3
     cur_step=1
 
-    log "STEP ${cur_step} of ${total_step_case_1_1}:close network to cmc0"
+    #log "STEP ${cur_step} of ${total_step_case_1_1}:close network to cmc0"
     cur_step=$((${cur_step}+1))
     ifconfig $1 down
 
-    log "STEP ${cur_step} of ${total_step_case_1_1}:access vpd"
+    #log "STEP ${cur_step} of ${total_step_case_1_1}:access vpd"
     cur_step=$((${cur_step}+1))
     test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
     if [[ $? != 0 ]];then
@@ -243,20 +243,20 @@ function test_case_fun_2_7()
     }
     fi
 
-    log "STEP ${cur_step} of ${total_step_case_1_1}:recover test config,open $1"
+    #log "STEP ${cur_step} of ${total_step_case_1_1}:recover test config,open $1"
     ifconfig $1 up
-    exit 0
+    return 0
 }
 
 echo ""
 log ">>>>>>test case 2.7 start: Simulate CMC0 fail<<<<<<"
-#test_case_fun_2_7 eth2
+test_case_fun_2_7 eth2
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.7 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 2.8 start: Simulate CMC1 fail<<<<<<"
-#test_case_fun_2_7 eth3
+test_case_fun_2_7 eth3
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 2.8 pass<<<<<<"
 
@@ -308,7 +308,7 @@ function test_case_fun_4_1()
      start_compass_and_check
      cmd_rc=$?
      timeout -k1 2 ipmitool -H ${eth1ip_of_cmc[0]} -U admin -P admin raw 0x30 0x22 0x01
-     exit $cmd_rc
+     return $cmd_rc
 }
 log ">>>>>>test case 4.1 start: Start compass when cmc0 is master<<<<<<"
 test_case_fun_4_1 1
@@ -327,7 +327,7 @@ function test_case_fun_4_3()
      start_compass_and_check
      cmd_rc=$?
      ifconfig $1 up
-     exit $cmd_rc
+     return $cmd_rc
 }
 log ">>>>>>test case 4.3 start: Start compass when network to cmc0 is down<<<<<<"
 test_case_fun_4_3 eth2
