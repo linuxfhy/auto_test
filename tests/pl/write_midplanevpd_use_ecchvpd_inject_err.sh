@@ -24,6 +24,11 @@ function write_and_check_vpd()
     readcmd="/compass/ec_chvpd -r -n $1"
 
     sh en_test.sh ${ERR_MOD}
+    cmd_rc=$?
+    [ ${cmd_rc} -eq 0 ] || {
+        log "cmd exec failed,cmd:sh en_test.sh ${ERR_MOD}, cmd_rc:${cmd_rc}"
+        return ${cmd_rc}
+    }
     readresult=$(${readcmd})
     cmd_rc=$?
     [ ${cmd_rc} -eq 0 ] || {
