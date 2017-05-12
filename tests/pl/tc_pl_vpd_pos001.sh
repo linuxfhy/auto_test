@@ -346,12 +346,12 @@ function test_case_fun_6_1()
     kill_node -f >null 2>&1
     sh write_midplanevpd_use_ecchvpd_inject_err.sh $1
 }
-log ">>>>>>test case 6.1 start<<<<<<"
+log ">>>>>>test case 6.1 start: Inject timeout error once for each command<<<<<<"
 test_case_fun_6_1 timeout
 [[ $? -eq 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 6.1 pass <<<<<<"
 
-log ">>>>>>test case 6.2 start<<<<<<"
+log ">>>>>>test case 6.2 start: Inject result-short error once for each command<<<<<<"
 test_case_fun_6_1 short
 [[ $? -eq 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 6.2 pass <<<<<<"
