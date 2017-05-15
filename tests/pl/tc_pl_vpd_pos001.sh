@@ -38,6 +38,7 @@ valid_cmc_ip=""
 eth1ip_of_cmc[2]=0
 
 export PATH=$PATH:$CDIR
+echo "PATH in tc_pl_vpd_pos0001.sh is $PATH"
 
 function log()
 {

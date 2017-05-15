@@ -5,6 +5,8 @@ LSCMD=ls
 trcfile="/dumps/scrumtest.trc"
 ERR_MOD=$1
 CDIR="$( cd "$( dirname "$0"  )" && pwd  )"
+export PATH=$PATH:$CDIR
+echo "PATH in write_mid_use_ecchvpd_inject_error.sh is $PATH"
 
 function log()
 {
