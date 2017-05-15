@@ -1,9 +1,11 @@
 #! /bin/bash
+NAME=$(basename $0)
+CDIR="$( cd "$( dirname "$0"  )" && pwd  )"
 EN_TEST_DIR=$PWD
 
 IPMITOOL=/usr/bin/ipmitool
 IPMITOOL_REAL=/usr/bin/ipmitool.real
-IPMITOOL_SHELL=$PWD/ipmitool.sh2
+IPMITOOL_SHELL=$CDIR/ipmitool.sh2
 
 
 trcfile="/dumps/scrumtest.trc"
@@ -15,11 +17,11 @@ function log()
 
 if [[ $1 =~ "short" ]]
 then
-    IPMITOOL_SHELL=$PWD/ipmitool_short.sh2
+    IPMITOOL_SHELL=$CDIR/ipmitool_short.sh2
     log "link ipmitool--->ipmitool_short.sh2"
 elif [[ $1 =~ "timeout" ]]
 then
-    IPMITOOL_SHELL=$PWD/ipmitool_timeout.sh2
+    IPMITOOL_SHELL=$CDIR/ipmitool_timeout.sh2
     log "link ipmitool--->ipmitool_timeout.sh2"
 fi
 
