@@ -17,7 +17,7 @@
 ################################################################################
 
 NAME=$(basename $0)
-CDIR=$(dirname  $0)
+CDIR="$( cd "$( dirname "$0"  )" && pwd  )"
 TMPDIR=${TMPDIR:-"/tmp"}
 TSROOT=$CDIR/../../
 
