@@ -1,7 +1,12 @@
-#! /bin/bash
+#!/bin/bash
+
 NAME=$(basename $0)
 CDIR="$( cd "$( dirname "$0"  )" && pwd  )"
 EN_TEST_DIR=$PWD
+echo "CDIR in $0 is $CDIR, PATH is $PATH"
+PATH=$PATH:$CDIR; export $PATH
+echo "CDIR in $0 is $CDIR, PATH is $PATH--after export PATH"
+
 
 IPMITOOL=/usr/bin/ipmitool
 IPMITOOL_REAL=/usr/bin/ipmitool.real
@@ -19,11 +24,11 @@ function log()
 if [[ $1 =~ "short" ]]
 then
     IPMITOOL_SHELL=$CDIR/ipmitool_short.sh2
-    log "link ipmitool--->ipmitool_short.sh2"
+    log "link ipmitool--->$IPMITOOL_SHELL"
 elif [[ $1 =~ "timeout" ]]
 then
     IPMITOOL_SHELL=$CDIR/ipmitool_timeout.sh2
-    log "link ipmitool--->ipmitool_timeout.sh2"
+    log "link ipmitool--->$IPMITOOL_SHELL"
 fi
 
 IPMI_INJECT=$EN_TEST_DIR/ipmi.inject
