@@ -26,7 +26,7 @@ function write_and_check_vpd()
 
     readcmd="/compass/ec_chvpd -r -n $1"
 
-echo "XXX: PATH=$PATH, PWD=$(pwd)"
+    #echo "XXX: PATH=$PATH, PWD=$(pwd)"
     sh /usr/bin/en_test.sh ${ERR_MOD}
     cmd_rc=$?
     [ ${cmd_rc} -eq 0 ] || {
