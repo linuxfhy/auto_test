@@ -14,7 +14,7 @@ cmc_ipmi_raw_replace()
    [ -n "$(echo "$IPMI_ARGES" |grep admin |grep "raw" |grep -i "${condition}")" ] && {
       #$IPMITOOL $IPMI_ARGES | 
 	  echo ${cmd_output} #raw_replace "$column_number" "$value"
-	  sh en_test.sh off
+	  sh /usr/bin/en_test.sh off
 	  exit ${cmd_rc};
    }
 }

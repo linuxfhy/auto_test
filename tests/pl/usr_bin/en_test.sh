@@ -5,14 +5,14 @@ FILE=$BASH_SOURCE      # added by veli
 NAME=$(basename $FILE) # updated by veli
 CDIR=$(dirname  $FILE) # updated by veli
 EN_TEST_DIR=$CDIR
-echo "CDIR in $0 is $CDIR, PATH is $PATH"
-export PATH=$PATH:$CDIR
-echo "CDIR in $0 is $CDIR, PATH is $PATH--after export PATH"
+#echo "CDIR in $0 is $CDIR, PATH is $PATH"
+#export PATH=$PATH:$CDIR
+#echo "CDIR in $0 is $CDIR, PATH is $PATH--after export PATH"
 
 
 IPMITOOL=/usr/bin/ipmitool
 IPMITOOL_REAL=/usr/bin/ipmitool.real
-IPMITOOL_SHELL=$CDIR/ipmitool.sh2
+IPMITOOL_SHELL=/usr/bin/ipmitool.sh2
 
 
 trcfile="/dumps/scrumtest.trc"
