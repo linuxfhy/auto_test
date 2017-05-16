@@ -1,10 +1,12 @@
 #!/bin/bash
+#export PS4='[${FUNCNAME}@${BASH_SOURCE}:${LINENO}|${SECONDS}]+ ' && set -x
 
-NAME=$(basename $0)
-CDIR="$( cd "$( dirname "$0"  )" && pwd  )"
-EN_TEST_DIR=$PWD
+FILE=$BASH_SOURCE      # added by veli
+NAME=$(basename $FILE) # updated by veli
+CDIR=$(dirname  $FILE) # updated by veli
+EN_TEST_DIR=$CDIR
 echo "CDIR in $0 is $CDIR, PATH is $PATH"
-PATH=$PATH:$CDIR; export $PATH
+export PATH=$PATH:$CDIR
 echo "CDIR in $0 is $CDIR, PATH is $PATH--after export PATH"
 
 
@@ -18,7 +20,7 @@ trcfile="/dumps/scrumtest.trc"
 function log()
 {
     #here must redirect echo output to file, if not, the test case 6.2 inject-short error test will fail.
-    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* >>${trcfile}
+    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* #>>${trcfile}
 }
 
 if [[ $1 =~ "short" ]]

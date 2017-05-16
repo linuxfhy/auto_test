@@ -29,6 +29,7 @@ source $TSROOT/lib/libstr.sh
 source $TSROOT/lib/libcommon.sh
 source $TSROOT/config.vars
 
+
 S_SAINFO=/compass/bin/sainfo
 S_SATASK=/compass/bin/satask
 S_SVCTASK=/compass/bin/svctask
