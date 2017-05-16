@@ -20,7 +20,7 @@ trcfile="/dumps/scrumtest.trc"
 function log()
 {
     #here must redirect echo output to file, if not, the test case 6.2 inject-short error test will fail.
-    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* #>>${trcfile}
+    echo "[$(date -d today +"%Y-%m-%d %H:%M:%S")]" $* >>${trcfile}
 }
 
 if [[ $1 =~ "short" ]]
