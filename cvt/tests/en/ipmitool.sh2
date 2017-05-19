@@ -1,0 +1,887 @@
+#!/bin/bash
+#
+# Copyright (c) 2017, Inspur. All rights reserved.
+#
+
+IPMITOOL=/usr/bin/ipmitool.real
+IPMITOOL_TEST_LOG=/dumps/test_ipmi.log
+IPMI_ARGES="$@"
+DEBUG="open"
+echo "[$(date)] ipmitool $@" >> /dumps/ipmitool.log
+
+basepath=`S=\`readlink "$0"\`; [ -z "$S" ] && S=$0; dirname $S`		#dir of ipmitool.sh2
+DFILE=$basepath/ipmi.inject
+[ -e "$DFILE" ] && source "$DFILE"
+current_time="date +%Y-%m-%d--%H:%M:%S"
+
+IPMI_RAW_CMDS=$basepath/raw_cmds.sh
+[ -e "$IPMI_RAW_CMDS" ] && source "$IPMI_RAW_CMDS"
+IPMITOOL_DEBUG_LOG=/tmp/ipmitool_debug.log
+
+function debug
+{
+   [ $DEBUG != "open" ] &&{
+      return
+   }
+   echo [$($current_time)] $@ >>$IPMITOOL_DEBUG_LOG
+}
+debug "[ipmitool2] start replace "
+[ "$TEST_CASE" != "open" ] && {
+   debug "ipmitool close"
+   $IPMITOOL $IPMI_ARGES 
+   exit $?
+}
+debug "[ipmitool2] inject start"
+
+#replace1 "FAN0 Speed" 2 "300"
+replace1()
+{
+   line_header_name="$1"
+   column_number="$2"
+   value="$3"
+   #awk -OF "|" '/'"$line_header_name"'/{ $'$column_number'='"$value"' } { OFS="|"; print $0}'
+   awk -OF "|" '/'"$line_header_name"'/{ gsub($'$column_number',"'$value'",$'$column_number') } { OFS="|"; print $0}'
+}
+
+#raw_replace 2 "300"
+raw_replace()
+{
+   column_number="$1"
+   value="$2"
+   awk -OF " " '{ gsub($'$column_number',"'$value'",$'$column_number') } { print $0}'
+}
+
+#$1 elmt type,$2 elmt value $3 line_header_name $4 column_number, $5 value
+cmc_ipmi_sensor_list_replace()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   line_header_name="$3"
+   column_number=$4
+   value=$5
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" | grep admin)" ] && {
+      $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+}
+
+cmc_ipmi_sensor_list_replace1()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   line_header_name="$3"
+   column_number=$4
+   reference_column=$5
+   operator=$6
+   operator_value=$7
+   
+#  if [[ "$line_header_name" == "Inlet Temp"  || "$line_header_name" == "CMC DB Temp" ]]; then
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" | grep admin)" ] && {
+      value1=`$IPMITOOL $IPMI_ARGES | grep "$line_header_name" | awk -F "|" -v col=$reference_column '{print $col}'`
+      if [ "$operator" == "+" ]; then
+         value=$(echo "$value1+$operator_value"|bc)
+      elif [ "$operator" == "-" ]; then
+	     value=$(echo "$value1-$operator_value"|bc)
+      fi
+      $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+#   fi
+}
+
+cmc_ipmi_sensor_list_replace3()
+{
+    if [ $# -le 2 ]; then 
+       return
+    fi
+    
+    j=$((($#-2) % 5))
+    if [ $j -ne 0 ]; then 
+       return
+   fi
+
+   elmt_name="$1"
+   elmt_value="$2"
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" | grep admin)" ] && {
+   
+       cmd="$IPMITOOL $IPMI_ARGES "
+        while [ $# -ne 2 ]
+        do
+            line_header_name="$3"
+            column_number=$4
+            reference_column=$5
+            operator=$6
+            operator_value=$7
+            
+          value=`$IPMITOOL $IPMI_ARGES | grep "$line_header_name" | awk -F "|" -v col=$reference_column '{print $col}'`
+          if [ "$operator" == "+" ]; then
+             value=$(echo "$value+$operator_value"|bc)
+          elif [ "$operator" == "-" ]; then
+             value=$(echo "$value-$operator_value"|bc)
+          fi
+
+          cmd=${cmd}"| replace1 \"$line_header_name\" \"$column_number\" \"$value\" "
+          shift 5
+        done
+        
+        eval $cmd
+        exit $?
+    }
+}
+
+
+cmc_ipmi_sensor_list_replace_value()
+{
+   line_header_name="$1"
+   column_number="$2"
+   value="$3"
+   [ -n "$value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" |grep admin)" ] && {
+      $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+}
+
+
+cmc_ipmi_raw_replace()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   raw_cmd="$3"
+   column_number="$4"
+   value="$5"
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep admin | grep "raw $raw_cmd" )" ] && {
+      $IPMITOOL $IPMI_ARGES | raw_replace "$column_number" "$value"
+      exit $?;
+   }
+}
+
+cmc_ipmi_raw_replace_2()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   column_number_1="$3"
+   value_1="$4"
+   column_number_2="$5"
+   value_2="$6"
+   raw_cmd="$7"
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" |grep admin |grep "raw $raw_cmd" )" ] && {
+      $IPMITOOL $IPMI_ARGES | raw_replace "$column_number_1" "$value_1" | raw_replace "$column_number_2" "$value_2"
+      exit $?;
+   }
+}
+
+bmc_ipmi_sensor_list_replace()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   line_header_name="$3"
+   column_number=$4
+   value=$5
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" )" ] && {
+      $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+}
+bmc_ipmi_sensor_list_replace_value()
+{
+   line_header_name="$1"
+   column_number="$2"
+   value="$3"
+   [ -n "$value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" )" ] && {
+      $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+}
+#$1 pos , $2 value 
+raw_replace_field()
+{
+    pos=$1;
+    value=$2;
+    awk -OF " " '{$'$pos'='$value'; print $0} ' ;
+}
+#$1 start , $2 src,  $3 dest
+raw_replace_many_field()
+{
+    start=$1
+    
+    srcarr=($2)
+    srclength=${#srcarr[*]}
+    
+    destarr=($3)
+    destlength=${#destarr[*]}
+    
+    i=0
+    j=0
+    k=0
+    
+    for (( i=0;i<$srclength;i++ ))
+    do 
+        if [ $i -ge $start ] && [ $k -lt $destlength ]; then
+            echo -e "${destarr[$k]} \c"
+            k=$(($k+1))
+        else
+            echo -e "${srcarr[$i]} \c"
+        fi    
+        
+        j=$((($i+1) % 16))
+        if [ $j -eq 0 ]; then 
+            echo
+        fi    
+    done
+    echo
+}
+#$1 string
+str_to_ascii()
+{
+    str="$1"
+    str=$(echo $str | sed "s/[^\n]/&\t/g" );
+    ret=""
+    for s in $str 
+    do 
+         ret=$ret" "`printf "%x\n" "'$s"` 
+    done
+    echo $ret
+}
+#$1 start , $2 src,  $3 dest_string
+raw_replace_string()
+{
+    start="$1"
+    src="$2"
+    dest_string="$3"
+    dest=$(str_to_ascii "$dest_string")
+    raw_replace_many_field "$start"  "$src" "$dest"
+}
+#sample
+#cmd="ipmitool -H 192.168.200.42 -U admin -P admin raw 0x30 0x45"
+#ret=$($cmd)
+#raw_replace_string 2  "$ret" "abcde"
+
+cmc_ipmi_raw_replace_3()
+{
+   start="$1"
+   dest="$2"
+   raw_cmd="$3"
+   
+   [ -n "$dest" ] && [ -n "$(echo "$IPMI_ARGES" |grep admin |grep "raw $raw_cmd" )" ] && {
+      ret=$($IPMITOOL $IPMI_ARGES)
+      raw_replace_string $start "$ret" "$dest"
+      exit $?;
+   }
+}
+
+
+bmc_ipmi_sensor_list_replace1()
+{
+   [ -z "$(echo "$IPMI_ARGES" | grep "sensor list" )" ] && {
+      return;
+   }
+
+   elmt_name="$1"
+   elmt_value="$2"
+   line_header_name="$3"
+   column_number=$4
+   reference_column=$5
+   operator=$6
+   operator_value=$7
+
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" )" ] && {
+      value1=`$IPMITOOL $IPMI_ARGES | grep -m 1 "$line_header_name" | awk -F "|" -v col=$reference_column '{print $col}'`
+	  [ -z $value1 ] && { return; }
+      if [ "$operator" == "+" ]; then
+         value=$(echo "$value1+$operator_value"|bc)
+      elif [ "$operator" == "-" ]; then
+	     value=$(echo "$value1-$operator_value"|bc)
+      fi
+	  $IPMITOOL $IPMI_ARGES | replace1 "$line_header_name" "$column_number" "$value"
+      exit $?;
+   }
+}
+
+bmc_ipmi_raw_replace()
+{
+   elmt_name="$1"
+   elmt_value="$2"
+   raw_cmd="$3"
+   column_number="$4"
+   value="$5"
+   [ "$elmt_name" = "$elmt_value" ] && [ -n "$(echo "$IPMI_ARGES" | grep "raw $raw_cmd" )" ] && {
+      $IPMITOOL $IPMI_ARGES | raw_replace "$column_number" "$value"
+      exit $?;
+   }
+}
+
+cmc_ipmi_sensor_list_replace2()
+{
+	elmt_name="$1"
+
+	[[ -n "$elmt_name" ]] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" | grep admin)" ] && {
+		if [[ "$Enclosure_PSU_Status" = "online,online" ]]; then       
+			$IPMITOOL $IPMI_ARGES | replace1 "PSU0 Status" 4 "0x0180" | replace1 "PSU1 Status" 4 "0x0180"
+			exit $?;
+		elif [[ "$Enclosure_PSU_Status" = "online,offline" ]]; then
+			$IPMITOOL $IPMI_ARGES | replace1 "PSU0 Status" 4 "0x0180" | replace1 "PSU1 Status" 4 "0x0080"
+			exit $?;
+		elif [[ "$Enclosure_PSU_Status" = "offline,offline" ]]; then
+			$IPMITOOL $IPMI_ARGES | replace1 "PSU0 Status" 4 "0x0080" | replace1 "PSU1 Status" 4 "0x0080"
+			exit $?;
+		fi
+	}
+}
+
+bmc_ipmi_sensor_list_replace2()
+{
+	elmt_name="$1"
+  
+	[[ -n "$elmt_name" ]] && [ -n "$(echo "$IPMI_ARGES" | grep "sensor list" )" ] && {
+		if [[ "$Enclosure_CMC_Status" = "online,online" ]]; then       
+			$IPMITOOL $IPMI_ARGES | replace1 "CMC0 Status" 4 "0x0080" | replace1 "CMC1 Status" 4 "0x0080"
+			exit $?;
+		elif [[ "$Enclosure_CMC_Status" = "online,offline" ]]; then
+			$IPMITOOL $IPMI_ARGES | replace1 "CMC0 Status" 4 "0x0080" | replace1 "CMC1 Status" 4 "0x0480"
+			exit $?;
+		elif [[ "$Enclosure_CMC_Status" = "offline,offline" ]]; then
+			$IPMITOOL $IPMI_ARGES | replace1 "CMC0 Status" 4 "0x0480" | replace1 "CMC1 Status" 4 "0x0480"
+			exit $?;
+
+		elif [[ "$Enclosure_FAN_Presence" = "online,online,online" ]]; then		
+			$IPMITOOL $IPMI_ARGES | replace1 "FAN0 Presence" 4 "0x0080" | replace1 "FAN1 Presence" 4 "0x0080" | replace1 "FAN2 Presence" 4 "0x0080"
+			exit $?;
+		elif [[ "$Enclosure_FAN_Presence" = "online,online,offline" ]]; then		
+			$IPMITOOL $IPMI_ARGES | replace1 "FAN0 Presence" 4 "0x0080" | replace1 "FAN1 Presence" 4 "0x0080" | replace1 "FAN2 Presence" 4 "0x0180"
+			exit $?;
+		elif [[ "$Enclosure_FAN_Presence" = "online,offline,offline" ]]; then		
+			$IPMITOOL $IPMI_ARGES | replace1 "FAN0 Presence" 4 "0x0080" | replace1 "FAN1 Presence" 4 "0x0180" | replace1 "FAN2 Presence" 4 "0x0180"
+			exit $?;
+		elif [[ "$Enclosure_FAN_Presence" = "offline,offline,offline" ]]; then		
+			$IPMITOOL $IPMI_ARGES | replace1 "FAN0 Presence" 4 "0x0180" | replace1 "FAN1 Presence" 4 "0x0180" | replace1 "FAN2 Presence" 4 "0x0180"	
+			exit $?;
+		fi
+	}  
+}
+
+function ipmitool_case_temperature
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "TEMPERATURE" ] && {
+        return
+    }
+    debug "[ipmitool2] temperature inject"
+
+    bmc_ipmi_sensor_list_replace1 "$SATA_SSD_Temp_alarm_status"             "normal"    "SATA SSD Temp"     2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$SATA_SSD_Temp_alarm_status"             "warning"   "SATA SSD Temp"     2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$SATA_SSD_Temp_alarm_status"             "critical"  "SATA SSD Temp"     2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU0_Temp_alarm_status"                 "normal"    "CPU0 Temp"         2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU0_Temp_alarm_status"                 "warning"   "CPU0 Temp"         2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$CPU0_Temp_alarm_status"                 "critical"  "CPU0 Temp"         2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU1_Temp_alarm_status"                 "normal"    "CPU1 Temp"         2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU1_Temp_alarm_status"                 "warning"   "CPU1 Temp"         2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$CPU1_Temp_alarm_status"                 "critical"  "CPU1 Temp"         2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU0_VR_Temp_alarm_status"              "normal"    "CPU0 VR Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU0_VR_Temp_alarm_status"              "warning"   "CPU0 VR Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$CPU0_VR_Temp_alarm_status"              "critical"  "CPU0 VR Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU1_VR_Temp_alarm_status"              "normal"    "CPU1 VR Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$CPU1_VR_Temp_alarm_status"              "warning"   "CPU1 VR Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$CPU1_VR_Temp_alarm_status"              "critical"  "CPU1 VR Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCIE_SSD_Temp_alarm_status"             "normal"    "PCIE SSD Temp"     2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCIE_SSD_Temp_alarm_status"             "warning"   "PCIE SSD Temp"     2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$PCIE_SSD_Temp_alarm_status"             "critical"  "PCIE SSD Temp"     2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCIE_Zone_Temp_alarm_status"            "normal"    "PCIE Zone Temp"    2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCIE_Zone_Temp_alarm_status"            "warning"   "PCIE Zone Temp"    2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$PCIE_Zone_Temp_alarm_status"            "critical"  "PCIE Zone Temp"    2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$PLX8733_Temp_alarm_status"              "normal"    "PLX8733 Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$PLX8733_Temp_alarm_status"              "warning"   "PLX8733 Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$PLX8733_Temp_alarm_status"              "critical"  "PLX8733 Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$PLX8796_Temp_alarm_status"              "normal"    "PLX8796 Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$PLX8796_Temp_alarm_status"              "warning"   "PLX8796 Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$PLX8796_Temp_alarm_status"              "critical"  "PLX8796 Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCH_Temp_alarm_status"                  "normal"    "PCH Temp"          2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$PCH_Temp_alarm_status"                  "warning"   "PCH Temp"          2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$PCH_Temp_alarm_status"                  "critical"  "PCH Temp"          2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_AB_Temp_alarm_status"              "normal"    "DIMM AB Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_AB_Temp_alarm_status"              "warning"   "DIMM AB Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_AB_Temp_alarm_status"              "critical"  "DIMM AB Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_CD_Temp_alarm_status"              "normal"    "DIMM CD Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_CD_Temp_alarm_status"              "warning"   "DIMM CD Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_CD_Temp_alarm_status"              "critical"  "DIMM CD Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_EF_Temp_alarm_status"              "normal"    "DIMM EF Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_EF_Temp_alarm_status"              "warning"   "DIMM EF Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_EF_Temp_alarm_status"              "critical"  "DIMM EF Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_GH_Temp_alarm_status"              "normal"    "DIMM GH Temp"      2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_GH_Temp_alarm_status"              "warning"   "DIMM GH Temp"      2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_GH_Temp_alarm_status"              "critical"  "DIMM GH Temp"      2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_AB_VR_Temp_alarm_status"           "normal"    "DIMM AB VR Temp"   2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_AB_VR_Temp_alarm_status"           "warning"   "DIMM AB VR Temp"   2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_AB_VR_Temp_alarm_status"           "critical"  "DIMM AB VR Temp"   2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_CD_VR_Temp_alarm_status"           "normal"    "DIMM CD VR Temp"   2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_CD_VR_Temp_alarm_status"           "warning"   "DIMM CD VR Temp"   2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_CD_VR_Temp_alarm_status"           "critical"  "DIMM CD VR Temp"   2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_EF_VR_Temp_alarm_status"           "normal"    "DIMM EF VR Temp"   2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_EF_VR_Temp_alarm_status"           "warning"   "DIMM EF VR Temp"   2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_EF_VR_Temp_alarm_status"           "critical"  "DIMM EF VR Temp"   2 9 + 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_GH_VR_Temp_alarm_status"           "normal"    "DIMM GH VR Temp"   2 8 - 0.5
+    bmc_ipmi_sensor_list_replace1 "$DIMM_GH_VR_Temp_alarm_status"           "warning"   "DIMM GH VR Temp"   2 8 + 0.5
+    #bmc_ipmi_sensor_list_replace1 "$DIMM_GH_VR_Temp_alarm_status"           "critical"  "DIMM GH VR Temp"   2 9 + 0.5
+    cmc_ipmi_sensor_list_replace1 "$Inlet_Temp_alarm_status"                "normal"    "Inlet Temp"        2 8 - 0.5
+    cmc_ipmi_sensor_list_replace1 "$Inlet_Temp_alarm_status"                "warning"   "Inlet Temp"        2 8 + 0.5
+    #cmc_ipmi_sensor_list_replace1 "$Inlet_Temp_alarm_status"                "critical"  "Inlet Temp"        2 9 + 0.5
+    cmc_ipmi_sensor_list_replace1 "$CMC_DB_Temp_alarm_status"               "normal"    "CMC DB Temp"       2 8 - 0.5
+    cmc_ipmi_sensor_list_replace1 "$CMC_DB_Temp_alarm_status"               "warning"   "CMC DB Temp"       2 8 + 0.5
+    #cmc_ipmi_sensor_list_replace1 "$CMC_DB_Temp_alarm_status"               "critical"  "CMC DB Temp"       2 9 + 0.5
+    
+    bmc_ipmi_sensor_list_replace_value                        "PLX8733 Temp"           2   "$PLX8733_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "PLX8733 Temp"           8   "$PLX8733_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PLX8733 Temp"           9   "$PLX8733_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PLX8796 Temp"           2   "$PLX8796_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "PLX8796 Temp"           8   "$PLX8796_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PLX8796 Temp"           9   "$PLX8796_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 Temp"           2   "$CPU0_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 Temp"           8   "$CPU0_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 Temp"           9   "$CPU0_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 Temp"           2   "$CPU1_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 Temp"           8   "$CPU1_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 Temp"           9   "$CPU1_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 VR Temp"           2   "$CPU0_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 VR Temp"           8   "$CPU0_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU0 VR Temp"           9   "$CPU0_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 VR Temp"           2   "$CPU1_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 VR Temp"           8   "$CPU1_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "CPU1 VR Temp"           9   "$CPU1_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB Temp"           2   "$DIMM_AB_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB Temp"           8   "$DIMM_AB_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB Temp"           9   "$DIMM_AB_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD Temp"           2   "$DIMM_CD_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD Temp"           8   "$DIMM_CD_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD Temp"           9   "$DIMM_CD_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF Temp"           2   "$DIMM_EF_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF Temp"           8   "$DIMM_EF_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF Temp"           9   "$DIMM_EF_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH Temp"           2   "$DIMM_GH_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH Temp"           8   "$DIMM_GH_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH Temp"           9   "$DIMM_GH_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB VR Temp"           2   "$DIMM_AB_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB VR Temp"           8   "$DIMM_AB_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM AB VR Temp"           9   "$DIMM_AB_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD VR Temp"           2   "$DIMM_CD_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD VR Temp"           8   "$DIMM_CD_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM CD VR Temp"           9   "$DIMM_CD_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF VR Temp"           2   "$DIMM_EF_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF VR Temp"           8   "$DIMM_EF_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM EF VR Temp"           9   "$DIMM_EF_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH VR Temp"           2   "$DIMM_GH_VR_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH VR Temp"           8   "$DIMM_GH_VR_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "DIMM GH VR Temp"           9   "$DIMM_GH_VR_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCH Temp"           2   "$PCH_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "PCH Temp"           8   "$PCH_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCH Temp"           9   "$PCH_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "SATA SSD Temp"           2   "$SATA_SSD_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "SATA SSD Temp"           8   "$SATA_SSD_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "SATA SSD Temp"           9   "$SATA_SSD_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCIE SSD Temp"           2   "$PCIE_SSD_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "PCIE SSD Temp"           8   "$PCIE_SSD_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCIE SSD Temp"           9   "$PCIE_SSD_temp_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCIE Zone Temp"           2   "$PCIE_Zone_temperature" 
+    bmc_ipmi_sensor_list_replace_value                        "PCIE Zone Temp"           8   "$PCIE_Zone_temp_warning_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "PCIE Zone Temp"           9   "$PCIE_Zone_temp_critical_threshold"
+    
+    cmc_ipmi_sensor_list_replace_value                        "Inlet Temp"           2   "$Inlet_temperature" 
+    cmc_ipmi_sensor_list_replace_value                        "Inlet Temp"           8   "$Inlet_temp_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value                        "Inlet Temp"           9   "$Inlet_temp_critical_threshold"
+    cmc_ipmi_sensor_list_replace_value                        "CMC DB Temp"           2   "$CMC_DB_temperature" 
+    cmc_ipmi_sensor_list_replace_value                        "CMC DB Temp"           8   "$CMC_DB_temp_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value                        "CMC DB Temp"           9   "$CMC_DB_temp_critical_threshold"
+}
+function ipmitool_case_voltage
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "VOLTAGE" ] && {
+        return
+    }
+    debug "[ipmitool2] voltage inject"
+
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_Standby_alarm_status"     "normal"            "12V Standby"    2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_Standby_alarm_status"     "critical under"    "12V Standby"    2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_Standby_alarm_status"     "warning under"     "12V Standby"    2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_Standby_alarm_status"     "warning over"      "12V Standby"    2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_Standby_alarm_status"     "critical over"     "12V Standby"    2 9 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_5V_alarm_status"              "normal"            "5V"             2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_5V_alarm_status"              "critical under"    "5V"             2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_5V_alarm_status"              "warning under"     "5V"             2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_5V_alarm_status"              "warning over"      "5V"             2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_5V_alarm_status"              "critical over"     "5V"             2 9 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_Standby_alarm_status"    "normal"            "3.3V Standby"   2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_Standby_alarm_status"    "critical under"    "3.3V Standby"   2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_Standby_alarm_status"    "warning under"     "3.3V Standby"   2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_Standby_alarm_status"    "warning over"      "3.3V Standby"   2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_Standby_alarm_status"    "critical over"     "3.3V Standby"   2 9 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_alarm_status"            "normal"            "3.3V"           2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_alarm_status"            "critical under"    "3.3V"           2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_alarm_status"            "warning under"     "3.3V"           2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_alarm_status"            "warning over"      "3.3V"           2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3_3V_alarm_status"            "critical over"     "3.3V"           2 9 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_alarm_status"             "normal"            "12V"            2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_alarm_status"             "critical under"    "12V"            2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_alarm_status"             "warning under"     "12V"            2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_alarm_status"             "warning over"      "12V"            2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_12V_alarm_status"             "critical over"     "12V"            2 9 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3V_Battery_alarm_status"      "normal"            "3V Battery"     2 7 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3V_Battery_alarm_status"      "critical under"    "3V Battery"     2 6 - 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3V_Battery_alarm_status"      "warning under"     "3V Battery"     2 6 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3V_Battery_alarm_status"      "warning over"      "3V Battery"     2 8 + 0.1
+    bmc_ipmi_sensor_list_replace1 "$voltage_3V_Battery_alarm_status"      "critical over"     "3V Battery"     2 9 + 0.1
+
+
+    bmc_ipmi_sensor_list_replace_value                        "12V"   2 "$voltage_12V_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "12V"   7 "$voltage_12V_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "12V"   8 "$voltage_12V_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "12V"   6 "$voltage_12V_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "12V"   9 "$voltage_12V_critical_over_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "12V Standby"   2 "$voltage_12V_Standby_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "12V Standby"   7 "$voltage_12V_Standby_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "12V Standby"   8 "$voltage_12V_Standby_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "12V Standby"   6 "$voltage_12V_Standby_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "12V Standby"   9 "$voltage_12V_Standby_critical_over_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "5V"   2 "$voltage_5V_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "5V"   7 "$voltage_5V_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "5V"   8 "$voltage_5V_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "5V"   6 "$voltage_5V_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "5V"   9 "$voltage_5V_critical_over_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V"   2 "$voltage_3_3V_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V"   7 "$voltage_3_3V_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V"   8 "$voltage_3_3V_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "3.3V"   6 "$voltage_3_3V_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V"   9 "$voltage_3_3V_critical_over_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V Standby"   2 "$voltage_3_3V_Standby_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V Standby"   7 "$voltage_3_3V_Standby_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V Standby"   8 "$voltage_3_3V_Standby_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "3.3V Standby"   6 "$voltage_3_3V_Standby_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3.3V Standby"   9 "$voltage_3_3V_Standby_critical_over_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3V Battery"   2 "$voltage_3V_Battery_voltage"
+    bmc_ipmi_sensor_list_replace_value                        "3V Battery"   7 "$voltage_3V_Battery_warning_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3V Battery"   8 "$voltage_3V_Battery_warning_over_threshold"  
+    bmc_ipmi_sensor_list_replace_value                        "3V Battery"   6 "$voltage_3V_Battery_critical_under_threshold"
+    bmc_ipmi_sensor_list_replace_value                        "3V Battery"   9 "$voltage_3V_Battery_critical_over_threshold"                    
+}
+
+#PSU
+#status offline
+#input_failed on
+#output_failed on
+#fan_failed on
+#redundant no
+#error_sequence_number 
+#FRU_part_number 100
+#FRU_identity 100
+#firmware_level_1 100
+#firmware_level_2 
+#firmware_level_3 
+#switch_status off
+#fault_info DC_un_v
+#input_power invalid
+#input_power_watt 100
+#input_power_watt_over_threshold 100
+#output_power_watt 100
+#output_power_watt_over_threshold 100
+#input_voltage 100.000000
+#input_voltage_under_threshold 100.000000
+#input_voltage_over_threshold 100.000000
+#output_voltage 100.000000
+#output_voltage_under_threshold 100.000000
+#output_voltage_over_threshold 100.000000
+#temperature 100
+#temperature_warning_threshold 100
+#temperature_critical_threshold 100
+#fantray_speed 100
+#fantray_warning_threshold 100
+#fantray_critical_threshold 100
+#alarm_status critical
+
+function ipmitool_case_psu
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "PSU" ] && {
+        return
+    }
+    debug "[ipmitool2] psu inject"
+    
+    cmc_ipmi_sensor_list_replace1           "$PSU0_INPUT_FAILED"            "on"    "PSU0 VIN"        2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU0_INPUT_FAILED"            "off"   "PSU0 VIN"        2 6 + 1
+    cmc_ipmi_sensor_list_replace1           "$PSU0_OUTPUT_FAILED"           "on"    "PSU0 VOUT"       2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU0_OUTPUT_FAILED"           "off"   "PSU0 VOUT"       2 6 + 1
+    cmc_ipmi_sensor_list_replace1           "$PSU0_FAN_FAILED"              "on"    "PSU0 Fan Speed"  2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU0_FAN_FAILED"              "off"   "PSU0 Fan Speed"  2 6 + 1
+    cmc_ipmi_sensor_list_replace2           "$PSU0_REDUNDANT"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"             "$PSU0_FRU_PART_NUMBER"   "$RAW_GET_PSU_FWLEVEL"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"             "$PSU0_FWLEVEL1"          "$RAW_GET_PSU_FWLEVEL"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"             "$PSU0_FRU_IDENTITY"      "$RAW_GET_PSU_FRU_IDENTIFY"
+    cmc_ipmi_raw_replace                    "$PSU0_SWITCH_STATUS"           "on"                  "$RAW_GET_PSU_POWER"   1   "01"
+    cmc_ipmi_raw_replace                    "$PSU0_SWITCH_STATUS"           "off"                 "$RAW_GET_PSU_POWER"   1   "00"
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "normal"              "PSU0 VIN"        2 6 + 1        "PSU0 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_un_v"             "PSU0 VIN"        2 6 - 1        "PSU0 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_ov_v"             "PSU0 VIN"        2 9 + 1        "PSU0 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "ov_tm_wn"            "PSU0 VIN"        2 6 + 1        "PSU0 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_un_v:ov_tm_wn"    "PSU0 VIN"        2 6 - 1        "PSU0 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_ov_v:ov_tm_wn"    "PSU0 VIN"        2 9 + 1        "PSU0 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "ov_tm_fl"            "PSU0 VIN"        2 6 + 1        "PSU0 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_un_v:ov_tm_fl"    "PSU0 VIN"        2 6 - 1        "PSU0 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_FAULT_INFO"              "AC_ov_v:ov_tm_fl"    "PSU0 VIN"        2 9 + 1        "PSU0 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace            "$PSU0_INPUT_POWER"             "ac"                  "PSU0 Status"     4              "0x0180"
+    cmc_ipmi_sensor_list_replace            "$PSU0_INPUT_POWER"             "invalid"             "PSU0 Status"     4              "0x0080"
+    cmc_ipmi_sensor_list_replace3           "$PSU0_ALARM_STATUS"            "normal"              "PSU0 Temp" 2 8 - 1              "PSU0 Fan Speed" 2 6 + 9000 \
+                                                                            "PSU0 PIN" 2 9 - 1        "PSU0 POUT" 2 9 - 1  \
+                                                                            "PSU0 VIN" 2 6 + 1        "PSU0 VOUT" 2 6 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_ALARM_STATUS"            "warning"             "PSU0 Temp" 2 8 + 1              "PSU0 Fan Speed" 2 6 + 9000 \
+                                                                            "PSU0 PIN" 2 9 - 1        "PSU0 POUT" 2 9 - 1  \
+                                                                            "PSU0 VIN" 2 6 + 1        "PSU0 VOUT" 2 6 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU0_ALARM_STATUS"            "critical"            "PSU0 Temp" 2 9 + 1
+                                                                                                                                    
+    cmc_ipmi_sensor_list_replace	      	"$PSU0_status"                  "online"	"PSU0 Status"  			4 "0x0180"
+    cmc_ipmi_sensor_list_replace            "$PSU0_status"                  "offline"    "PSU0 Status"              4 "0x0080"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 PIN"                      2 "$PSU0_input_power_watt"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 PIN"                      9 "$PSU0_input_power_watt_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VIN"                      2 "$PSU0_input_voltage"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VIN"                      6 "$PSU0_input_voltage_under_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VIN"                      9 "$PSU0_input_voltage_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 POUT"                     2 "$PSU0_output_power_watt"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 POUT"                     9 "$PSU0_output_power_watt_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VOUT"                     2 "$PSU0_output_voltage"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VOUT"                     6 "$PSU0_output_voltage_under_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 VOUT"                     9 "$PSU0_output_voltage_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Temp"                     2 "$PSU0_temperature"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Temp"                     8 "$PSU0_temperature_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Temp"                     9 "$PSU0_temperature_critical_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Fan Speed"                2 "$PSU0_fantray_speed"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Fan Speed"                7 "$PSU0_fantray_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU0 Fan Speed"                6 "$PSU0_fantray_critical_threshold"
+
+    
+    
+    cmc_ipmi_sensor_list_replace1           "$PSU1_INPUT_FAILED"            "off"    "PSU1 VIN"         2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU1_INPUT_FAILED"            "on"     "PSU1 VIN"         2 6 + 1
+    cmc_ipmi_sensor_list_replace1           "$PSU1_OUTPUT_FAILED"           "off"    "PSU1 VOUT"        2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU1_OUTPUT_FAILED"           "on"     "PSU1 VOUT"        2 6 + 1
+    cmc_ipmi_sensor_list_replace1           "$PSU1_FAN_FAILED"              "off"    "PSU1 Fan Speed"   2 6 - 1
+    cmc_ipmi_sensor_list_replace1           "$PSU1_FAN_FAILED"              "on"     "PSU1 Fan Speed"   2 6 + 1
+    cmc_ipmi_sensor_list_replace2           "$PSU1_REDUNDANT"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"            "$PSU1_FRU_PART_NUMBER"      "$RAW_GET_PSU_FWLEVEL"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"            "$PSU1_FWLEVEL1"             "$RAW_GET_PSU_FWLEVEL"
+    cmc_ipmi_raw_replace_3                  "$RAW_OUTPUT_START"            "$PSU1_FRU_IDENTITY"         "$RAW_GET_PSU_FRU_IDENTIFY"
+    cmc_ipmi_raw_replace                    "$PSU1_SWITCH_STATUS"          "on"          "$RAW_GET_PSU_POWER"   2   "01"
+    cmc_ipmi_raw_replace                    "$PSU1_SWITCH_STATUS"          "off"         "$RAW_GET_PSU_POWER"   2   "00"
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "normal"              "PSU1 VIN"        2 6 + 1        "PSU1 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_un_v"             "PSU1 VIN"        2 6 - 1        "PSU1 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_ov_v"             "PSU1 VIN"        2 9 + 1        "PSU1 Temp"        2 8 - 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "ov_tm_wn"            "PSU1 VIN"        2 6 + 1        "PSU1 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_un_v:ov_tm_wn"    "PSU1 VIN"        2 6 - 1        "PSU1 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_ov_v:ov_tm_wn"    "PSU1 VIN"        2 9 + 1        "PSU1 Temp"        2 8 - 0
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "ov_tm_fl"            "PSU1 VIN"        2 6 + 1        "PSU1 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_un_v:ov_tm_fl"    "PSU1 VIN"        2 6 - 1        "PSU1 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_FAULT_INFO"             "AC_ov_v:ov_tm_fl"    "PSU1 VIN"        2 9 + 1        "PSU1 Temp"        2 9 + 1
+    cmc_ipmi_sensor_list_replace            "$PSU1_INPUT_POWER"            "ac"                  "PSU1 Status"     4 "0x0180"
+    cmc_ipmi_sensor_list_replace            "$PSU1_INPUT_POWER"            "invalid"             "PSU1 Status"     4 "0x0080"
+    cmc_ipmi_sensor_list_replace3           "$PSU1_ALARM_STATUS"           "normal"              "PSU1 Temp" 2 8 - 1        "PSU1 Fan Speed" 2 6 + 9000 \
+                                                                           "PSU1 PIN" 2 9 - 1        "PSU1 POUT" 2 9 - 1  \
+                                                                           "PSU1 VIN" 2 6 + 1        "PSU1 VOUT" 2 6 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_ALARM_STATUS"           "warning"             "PSU1 Temp" 2 8 + 1        "PSU1 Fan Speed" 2 6 + 9000 \
+                                                                           "PSU1 PIN" 2 9 - 1        "PSU1 POUT" 2 9 - 1  \
+                                                                           "PSU1 VIN" 2 6 + 1        "PSU1 VOUT" 2 6 + 1
+    cmc_ipmi_sensor_list_replace3           "$PSU1_ALARM_STATUS"           "critical"            "PSU1 Temp" 2 9 + 1
+    
+    cmc_ipmi_sensor_list_replace	      	"$PSU1_status"                  "online"	"PSU1 Status"  			4 "0x0180"
+    cmc_ipmi_sensor_list_replace              "$PSU1_status"                  "offline"    "PSU1 Status"              4 "0x0080"   
+    cmc_ipmi_sensor_list_replace_value      "PSU1 PIN"                      2 "$PSU1_input_power_watt"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 PIN"                      9 "$PSU1_input_power_watt_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VIN"                      2 "$PSU1_input_voltage"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VIN"                      6 "$PSU1_input_voltage_under_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VIN"                      9 "$PSU1_input_voltage_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 POUT"                     2 "$PSU1_output_power_watt"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 POUT"                     9 "$PSU1_output_power_watt_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VOUT"                     2 "$PSU1_output_voltage"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VOUT"                     6 "$PSU1_output_voltage_under_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 VOUT"                     9 "$PSU1_output_voltage_over_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Temp"                     2 "$PSU1_temperature"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Temp"                     8 "$PSU1_temperature_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Temp"                     9 "$PSU1_temperature_critical_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Fan Speed"                2 "$PSU1_fantray_speed"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Fan Speed"                7 "$PSU1_fantray_warning_threshold"
+    cmc_ipmi_sensor_list_replace_value      "PSU1 Fan Speed"                6 "$PSU1_fantray_critical_threshold"
+}
+
+
+#CMC
+#engine_id 3
+#slot_id 100
+#status online
+#alarm_status normal
+#state inactive
+#hb_switch off
+#hb_status alive
+#hb_speed 3
+#swapped no
+#error_sequence_number 
+#FRU_part_number reserve
+#FRU_identity reserve
+#firmware_level 100
+
+function ipmitool_case_cmc
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "CMC" ] && {
+        return
+    }
+    debug "[ipmitool2] cmc inject"
+    cmc_ipmi_raw_replace            "$CMC0_engine_id"      "3"              "$RAW_GET_CMC_ENGINEL_ID"        2 "03"
+    cmc_ipmi_raw_replace            "$CMC0_slot_id"        "3"              "$RAW_GET_CMC_SLOT_ID"           1 "03"
+    bmc_ipmi_sensor_list_replace    "$CMC0_status"         "online"         "CMC0 Status"                    4 "0x0080"
+    bmc_ipmi_sensor_list_replace    "$CMC0_status"         "offline"        "CMC0 Status"                    4 "0x0480"
+    cmc_ipmi_raw_replace            "$$CMC0_alarm_status"  "normal"         "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "01"
+	cmc_ipmi_raw_replace            "$$CMC0_alarm_status"  "critical under" "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "00"
+    cmc_ipmi_raw_replace            "$CMC0_state"          "active"         "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "01"
+    cmc_ipmi_raw_replace            "$CMC0_state"          "inactive"       "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "00"
+	cmc_ipmi_raw_replace            "$CMC0_hb_switch"      "on"             "$RAW_GET_CMC_HEARTBEAT"         1 "01"
+    cmc_ipmi_raw_replace            "$CMC0_hb_switch"      "off"            "$RAW_GET_CMC_HEARTBEAT"         1 "00"
+	cmc_ipmi_raw_replace            "$CMC0_hb_status"      "alive"          "$RAW_GET_CMC_HEARTBEAT"         4 "00"
+    cmc_ipmi_raw_replace            "$CMC0_hb_status"      "broken"         "$RAW_GET_CMC_HEARTBEAT"         4 "01"
+    cmc_ipmi_raw_replace            "$CMC0_hb_speed"       "3"              "$RAW_GET_CMC_HEARTBEAT_SPEED"   2 "03"
+    cmc_ipmi_raw_replace            "$CMC0_firmware_level" "0.68"           "$RAW_GET_CMC_FWLEVEL"           3 "68"          
+	
+    cmc_ipmi_raw_replace            "$CMC1_engine_id"      "3"              "$RAW_GET_CMC_ENGINEL_ID"        2 "03"
+    cmc_ipmi_raw_replace            "$CMC1_slot_id"        "3"              "$RAW_GET_CMC_SLOT_ID"           1 "03"
+    bmc_ipmi_sensor_list_replace    "$CMC1_status"         "online"         "CMC1 Status"                    4 "0x0080"
+    bmc_ipmi_sensor_list_replace    "$CMC1_status"         "offline"        "CMC1 Status"                    4 "0x0480"
+    cmc_ipmi_raw_replace            "$$CMC1_alarm_status"  "normal"         "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "01"
+	cmc_ipmi_raw_replace            "$$CMC1_alarm_status"  "critical under" "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "00"
+	cmc_ipmi_raw_replace            "$CMC1_state"          "active"         "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "01"
+    cmc_ipmi_raw_replace            "$CMC1_state"          "inactive"       "$RAW_GET_CMC_ACTIVE_STANDBY"    1 "00"
+	cmc_ipmi_raw_replace            "$CMC1_hb_switch"      "on"             "$RAW_GET_CMC_HEARTBEAT"         1 "01"
+    cmc_ipmi_raw_replace            "$CMC1_hb_switch"      "off"            "$RAW_GET_CMC_HEARTBEAT"         1 "00"
+	cmc_ipmi_raw_replace            "$CMC1_hb_status"      "alive"          "$RAW_GET_CMC_HEARTBEAT"         4 "00"
+    cmc_ipmi_raw_replace            "$CMC1_hb_status"      "broken"         "$RAW_GET_CMC_HEARTBEAT"         4 "01"
+    cmc_ipmi_raw_replace            "$CMC1_hb_speed"       "3"              "$RAW_GET_CMC_HEARTBEAT_SPEED"   2 "03"
+    cmc_ipmi_raw_replace            "$CMC1_firmware_level" "0.68"           "$RAW_GET_CMC_FWLEVEL"           5 "68"
+
+}
+# FAN
+# enclosure_id 93
+# fan_module_id 1
+# status online
+# error_sequence_number 
+# FRU_part_number reserve
+# FRU_identity reserve
+# alarm_status normal
+# switch on
+# speed 4500
+# speed_mode auto
+# warning_threshold 3000
+# critical_threshold 500
+# fault_LED off
+
+function ipmitool_case_fan
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "FAN" ] && {
+        return
+    }
+    debug "[ipmitool2] fan inject"
+    bmc_ipmi_sensor_list_replace  "$FAN0_status"        "online"   "FAN0 Presence"     4 "0x0080" 
+    bmc_ipmi_sensor_list_replace  "$FAN0_status"        "offline"  "FAN0 Presence"     4 "0x0180"
+    bmc_ipmi_sensor_list_replace  "$FAN0_switch_status" "on"       "FAN0 Speed"        2 "1"
+    bmc_ipmi_sensor_list_replace  "$FAN0_switch_status" "off"      "FAN0 Speed"        2 "0"
+    bmc_ipmi_sensor_list_replace_value                             "FAN0 Speed"        7 "$FAN0_waring_threshold" 
+    bmc_ipmi_sensor_list_replace_value                             "FAN0 Speed"        6 "$FAN0_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                             "FAN0 Speed"        2 "$FAN0_speed"
+    bmc_ipmi_sensor_list_replace1 "$FAN0_alarm_status"  "normal"   "FAN0 Speed"        2 7 + 1 
+    bmc_ipmi_sensor_list_replace1 "$FAN0_alarm_status"  "warning"  "FAN0 Speed"        2 7 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN0_alarm_status"  "critical" "FAN0 Speed"        2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN0_fault_LED"     "on"       "FAN0 Speed"        2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN0_fault_LED"     "off"      "FAN0 Speed"        2 6 + 1
+    bmc_ipmi_raw_replace          "$FAN0_speed_mode"    "auto"     "$RAW_GET_FAN_MODE" 1 "00"
+    bmc_ipmi_raw_replace          "$FAN0_speed_mode"    "manual"   "$RAW_GET_FAN_MODE" 1 "01"
+
+    bmc_ipmi_sensor_list_replace  "$FAN1_status"        "online"   "FAN1 Presence"     4 "0x0080" 
+    bmc_ipmi_sensor_list_replace  "$FAN1_status"        "offline"  "FAN1 Presence"     4 "0x0180"
+    bmc_ipmi_sensor_list_replace  "$FAN1_switch_status" "on"       "FAN1 Speed"        2 "1"
+    bmc_ipmi_sensor_list_replace  "$FAN1_switch_status" "off"      "FAN1 Speed"        2 "0"
+    bmc_ipmi_sensor_list_replace_value                             "FAN1 Speed"        7 "$FAN1_waring_threshold" 
+    bmc_ipmi_sensor_list_replace_value                             "FAN1 Speed"        6 "$FAN1_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                             "FAN1 Speed"        2 "$FAN1_speed"
+    bmc_ipmi_sensor_list_replace1 "$FAN1_alarm_status"  "normal"   "FAN1 Speed"      2 7 + 1 
+    bmc_ipmi_sensor_list_replace1 "$FAN1_alarm_status"  "warning"  "FAN1 Speed"      2 7 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN1_alarm_status"  "critical" "FAN1 Speed"      2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN1_fault_LED"     "on"       "FAN1 Speed"      2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN1_fault_LED"     "off"      "FAN1 Speed"      2 6 + 1
+    bmc_ipmi_raw_replace          "$FAN1_speed_mode"    "auto"     "$RAW_GET_FAN_MODE" 1 "00"
+    bmc_ipmi_raw_replace          "$FAN1_speed_mode"    "manual"   "$RAW_GET_FAN_MODE" 1 "01"
+
+    bmc_ipmi_sensor_list_replace  "$FAN2_status"        "online"   "FAN2 Presence"     4 "0x0080" 
+    bmc_ipmi_sensor_list_replace  "$FAN2_status"        "offline"  "FAN2 Presence"     4 "0x0180"
+    bmc_ipmi_sensor_list_replace  "$FAN2_switch_status" "on"       "FAN2 Speed"        2 "1"
+    bmc_ipmi_sensor_list_replace  "$FAN2_switch_status" "off"      "FAN2 Speed"        2 "0"
+    bmc_ipmi_sensor_list_replace_value                             "FAN2 Speed"        7 "$FAN2_waring_threshold" 
+    bmc_ipmi_sensor_list_replace_value                             "FAN2 Speed"        6 "$FAN2_critical_threshold"
+    bmc_ipmi_sensor_list_replace_value                             "FAN2 Speed"        2 "$FAN2_speed"
+    bmc_ipmi_sensor_list_replace1 "$FAN2_alarm_status"  "normal"   "FAN2 Speed"      2 7 + 1 
+    bmc_ipmi_sensor_list_replace1 "$FAN2_alarm_status"  "warning"  "FAN2 Speed"      2 7 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN2_alarm_status"  "critical" "FAN2 Speed"      2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN2_fault_LED"     "on"       "FAN2 Speed"      2 6 - 1
+    bmc_ipmi_sensor_list_replace1 "$FAN2_fault_LED"     "off"      "FAN2 Speed"      2 6 + 1
+    bmc_ipmi_raw_replace          "$FAN2_speed_mode"    "auto"     "$RAW_GET_FAN_MODE" 1 "00"
+    bmc_ipmi_raw_replace          "$FAN2_speed_mode"    "manual"   "$RAW_GET_FAN_MODE" 1 "01"
+
+}
+
+# CANISTER
+# enclosure_id 93
+# canister_id 1
+# status online
+# type node
+# node_id 1
+# node_name node1
+# FRU_part_number reserve
+# FRU_identity reserve
+# WWNN 56C92BF801001371
+# firmware_level 0.60
+# temperature 34
+# fault_LED on
+# SES_status UNKNOWN(5)
+# error_sequence_number 
+# SAS_port_1_status 
+# SAS_port_2_status 
+# firmware_level_2 6.02
+# firmware_level_3 
+# firmware_level_4 
+# firmware_level_5 
+# firmware_level_6
+
+function ipmitool_case_canister
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "CANISTER" ] && {
+        return
+    }
+    debug "[ipmitool2] canister inject"
+    bmc_ipmi_sensor_list_replace_value  "SATA SSD Temp"      2 "$canister_temp"
+    cmc_ipmi_raw_replace_2              "$canister_fw_level"    "99"          3 "00"   4 "$canister_fw_level"    "$RAW_GET_BMC_FWLEVEL"
+    cmc_ipmi_raw_replace_2              "$canister_fw_level_2"  "99"          5 "00"   6 "$canister_fw_level_2"  "$RAW_GET_BMC_FWLEVEL"
+}
+function ipmitool_case_enclosure
+{
+    [ $TEST_CASE_ELEMENT_TYPE != "ENCLOSURE" ] && {
+        return
+    }
+    debug "[ipmitool2] enclosure inject"
+    #enclosure
+    cmc_ipmi_sensor_list_replace2 "$Enclosure_online_PSUs"
+    bmc_ipmi_sensor_list_replace2 "$Enclosure_online_CMCs"
+    bmc_ipmi_sensor_list_replace2 "$Enclosure_online_fan_modules"
+	
+    cmc_ipmi_sensor_list_replace_value                        "Inlet Temp"           2   "$Inlet_temperature" 
+}
+
+debug "[ipmitool2] start inject"
+
+ipmitool_case_fan
+ipmitool_case_psu
+ipmitool_case_cmc
+ipmitool_case_temperature
+ipmitool_case_voltage
+ipmitool_case_canister
+ipmitool_case_enclosure
+debug "[ipmitool2] end inject"
+
+
+$IPMITOOL $IPMI_ARGES
+exit $?

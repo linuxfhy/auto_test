@@ -1,0 +1,6 @@
+S_EC_CHVPD=/compass/ec_chvpd
+S_IMM_SERVICE=/compass/imm_service
+S_SAINFO=/compass/bin/sainfo
+S_SATASK=/compass/bin/satask
+S_SVCINFO=/compass/bin/svcinfo
+S_SVCTASK=/compass/bin/svctask
