@@ -1,0 +1,63 @@
+Start| 20170418 root(0) | 14:03:43 |
+Start| 22426 Linux ubuntu 3.16.0-30-generic #40~14.04.1-Ubuntu SMP Thu Jan 15 17:45:15 UTC 2015 i686 i686 i686 GNU/Linux |
+STC_ENV| STC_VERSION=0.1
+STC_ENV| STC_NAME=oak
+STC_ENV| ARCH=i686
+STC_ENV| MACH=i686
+STC_ENV| LD_LIBRARY_PATH=
+STC_ENV| PATH=./tests:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+STC_ENV| RESULTS_DIR=/tmp/oak/results
+STC_ENV| TIMEOUT=1800
+Test_Case_Start| 22426 setup | 14:03:43 |
+stdout| this is dummy setup
+stdout| [ XRES ] setup.sh : PASS
+Test_Case_End| 22426 setup | PASS | 14:03:43 |
+Test_Case_Start| ./tests/tc_foo_pos001.sh  | 14:03:43 |
+stdout| ################################################################################
+stdout| #
+stdout| # ID:   foo/tc_foo_pos001
+stdout| #
+stdout| # DESCRIPTION:
+stdout| #       Dummy Test pos001
+stdout| #
+stdout| # STRATEGY:
+stdout| #       1. issue "ls -l /tmp", expect to pass
+stdout| #       2. issue "uname -a | grep oak", expect to pass
+stdout| #
+stdout| ################################################################################
+stdout| [ PASS ] RUN_POS: ls -l /tmp, passed definitely # $?=0
+stdout| ---1---: total 12
+stdout| ---1---: drwxr-xr-x 3 root root 4096 Apr 18 14:03 oak
+stdout| ---1---: -rw-r--r-- 1 root root  350 Apr 18 14:03 run._exec.log.22426
+stdout| ---1---: -rw-r--r-- 1 root root    0 Apr 18 14:03 _RUN.out.1492495423.2012.22485
+stdout| ---1---: -rw-r--r-- 1 root root   45 Apr 18 14:03 run.tests_setup.log.22426
+stdout| ---1---: -rw-r--r-- 1 root root    0 Apr 18 14:03 _RUN.tmp.1492495423.2012.22485
+stdout| [ FAIL ] RUN_POS: uname -a | grep oak # $?=1
+stdout| Linux ubuntu 3.16.0-30-generic #40~14.04.1-Ubuntu SMP Thu Jan 15 17:45:15 UTC 2015 i686 i686 i686 GNU/Linux
+stdout| [ XRES ] tc_foo_pos001.sh : FAIL
+Test_Case_End| 22482 ./tests/tc_foo_pos001.sh | FAIL | 14:03:44 |
+Test_Case_Start| ./tests/tc_foo_pos002.sh  | 14:03:44 |
+stdout| ################################################################################
+stdout| #
+stdout| # ID:   foo/tc_foo_pos002
+stdout| #
+stdout| # DESCRIPTION:
+stdout| #       Dummy Test pos002
+stdout| #
+stdout| # STRATEGY:
+stdout| #       1. issue "uname -a", expect to pass
+stdout| #       2. issue "ls /tmp/OopsXXX", expect to fail
+stdout| #
+stdout| ################################################################################
+stdout| [ PASS ] RUN_POS: uname -a, passed definitely # $?=0
+stdout| ---1---: Linux ubuntu 3.16.0-30-generic #40~14.04.1-Ubuntu SMP Thu Jan 15 17:45:15 UTC 2015 i686 i686 i686 GNU/Linux
+stdout| [ INFO ] RUN_NEU: rm -f /tmp/OopsXXX, skipped on purpose # $?=0
+stdout| [ PASS ] RUN_NEG: ls /tmp/OopsXXX, failed as expected # $?=2
+stdout| ---2---: ls: cannot access /tmp/OopsXXX: No such file or directory
+stdout| [ XRES ] tc_foo_pos002.sh : PASS
+Test_Case_End| 22578 ./tests/tc_foo_pos002.sh | PASS | 14:03:45 |
+Test_Case_Start| 22426 cleanup | 14:03:45 |
+stdout| this is dummy cleanup
+stdout| [ XRES ] cleanup.sh : PASS
+Test_Case_End| 22426 cleanup | PASS | 14:03:45 |
+End| 22426 | 14:03:45 |
