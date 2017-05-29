@@ -7,7 +7,7 @@
 #
 # __stc_assertion_start
 #
-# ID:	pl/tc_pl_vpd_case4.sh
+# ID:	pl/tc_pl_vpd_case6.sh
 #
 # DESCRIPTION:
 #	Test cases for VPD-access
@@ -46,27 +46,14 @@ trap "tc_xres \$?" EXIT
 log ">>>>>>kill node before start<<<<<<"
 kill_node -f >null 2>&1
 
-log ">>>>>>test case 4.1 start: Start compass when cmc0 is master<<<<<<"
-test_case_fun_4_1 1
+log ">>>>>>test case 6.1 start: Inject timeout error once for each command<<<<<<"
+test_case_fun_6_1 timeout
 [[ $? -eq 0 ]] || exit $STF_FAIL
-log ">>>>>>test case 4.1 pass<<<<<<"
+log ">>>>>>test case 6.1 pass <<<<<<"
 
-log ">>>>>>test case 4.2 start: Start compass when cmc0 is slave<<<<<<"
-test_case_fun_4_1 0
+log ">>>>>>test case 6.2 start: Inject result-short error once for each command<<<<<<"
+test_case_fun_6_1 short
 [[ $? -eq 0 ]] || exit $STF_FAIL
-log ">>>>>>test case 4.2 pass<<<<<<"
-
-
-log ">>>>>>test case 4.3 start: Start compass when network to cmc0 is down<<<<<<"
-test_case_fun_4_3 eth2
-[[ $? -eq 0 ]] || exit $STF_FAIL
-log ">>>>>>test case 4.3 pass<<<<<<"
-
-log ">>>>>>test case 4.2 start: Start compass when network to cmc1 is down<<<<<<"
-test_case_fun_4_3 eth3
-[[ $? -eq 0 ]] || exit $STF_FAIL
-log ">>>>>>test case 4.2 pass<<<<<<"
-
-log ">>>>>>test case 4.5/4.6: Start compass when only one cmc is present, need operate handly, mark as pass<<<<<<"
+log ">>>>>>test case 6.2 pass <<<<<<"
 
 exit $STF_PASS
