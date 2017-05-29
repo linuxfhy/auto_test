@@ -48,25 +48,25 @@ kill_node -f >null 2>&1
 
 echo ""
 log ">>>>>>test case 1.1 start:write mid vpd use ipmi<<<<<<"
-#test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
+test_case_fun_1_1 write_midplanevpd_optimized_anyCPUcnt.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.1 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 1.2 start:write mid vpd use ec_chvpd<<<<<<"
-#test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
+test_case_fun_1_1 write_midplanevpd_use_ecchvpd.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.2 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 1.3 start:write can vpd use ipmi<<<<<<"
-#test_case_fun_1_1 write_canistervpd_optimized.sh
+test_case_fun_1_1 write_canistervpd_optimized.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.3 pass<<<<<<"
 
 echo ""
 log ">>>>>>test case 1.4 start:write and read can vpd use ec_chvpd<<<<<<"
-#test_case_fun_1_1 write_canistervpd_use_ecchvpd.sh
+test_case_fun_1_1 write_canistervpd_use_ecchvpd.sh
 [[ $? == 0 ]] || exit $STF_FAIL
 log ">>>>>>test case 1.4 pass<<<<<<"
 
