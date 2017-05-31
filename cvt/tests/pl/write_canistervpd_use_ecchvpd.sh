@@ -99,7 +99,8 @@ do
     arr_index=$(($arr_index+1))
 done
 
-#上一次循环写入每一项相当于初始化，第二次写入每一项时需要判断对其它项有没有影响
+#The first loop of writing is used for initialization，and in the scecond loop of writing we need to check whether other vpd entries is changed
+#when one vpd entry is written
 if [[ ${g_para_1} =~ "w_affec" ]]; then
     arr_index=0
     log "check whether other vpd fields will be changed when we write one field"
