@@ -100,10 +100,11 @@ execbmcipmicmd 0x00 0X2B 0x93 0x38 0x35 0x79 0x36 0x3$l 0x3$m 0x3$n
 #W00602H（单处理器）W00602E（双处理器）
 #MZ7511 01XXX
 cpu_cnt=$(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)
-if( $cpu_cnt == 1 ) ; then
-    tmpcode = 48
-elif ( $cpu_cnt == 2 ); then
-    tmpcode = 45
+#echo "cpu count is $cpu_cnt"
+if [ $cpu_cnt -eq 1 ];then
+    tmpcode=48
+elif [ $cpu_cnt -eq 2 ]; then
+    tmpcode=45
 fi
 
 execbmcipmicmd 0x00 0X2B 0x80 0x57 0x30 0x30 0x36 0x30 0x32 0x${tmpcode}
