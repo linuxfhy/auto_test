@@ -97,7 +97,7 @@ execbmcipmicmd 0x00 0X2B 0x93 0x38 0x35 0x79 0x36 0x3$l 0x3$m 0x3$n
 
 #vpd_can_fru_identity_e
 #11S 
-#W00602H（单处理器）W00602E（双处理器）
+#W00602H（单处理器)/W00602E（双处理器）
 #MZ7511 01XXX
 cpu_cnt=$(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)
 if [ $cpu_cnt -eq 1 ];then
